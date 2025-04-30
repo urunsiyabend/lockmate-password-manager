@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    container_name: surrealdb
+    command: start --user root --pass root memory
+    ports:
+      - "10001:8000"
+
+#  api:
+#    build: .
+#    container_name: rust-api
+#    depends_on:
+#      - surrealdb
+#    ports:
+#      - "10002:10002"
+#    environment:
+#      - DATABASE_URL=ws://surrealdb:8000
