@@ -1,2 +1,2 @@
-pub mod router;
 pub mod healthcheck;
+pub mod router;

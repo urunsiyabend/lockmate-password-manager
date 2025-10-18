@@ -1,13 +1,13 @@
-pub mod domain;
-pub mod application;
-pub mod infrastructure;
 pub mod api;
+pub mod application;
+pub mod domain;
+pub mod infrastructure;
 use api::rest::router::create_router;
 
-use axum::http::{HeaderValue, Method};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-use tower_http::cors::CorsLayer;
+use axum::http::{HeaderValue, Method};
 use infrastructure::data::db_context::surrealdb_context::init_db;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
@@ -15,7 +15,7 @@ async fn main() {
 
     match init_db().await {
         Ok(ctx) => println!("✔️ DB initialized: {:?}", ctx),
-        Err(e)  => {
+        Err(e) => {
             eprintln!("❌ init_db failed: {:?}", e);
             std::process::exit(1);
         }
@@ -31,6 +31,8 @@ async fn main() {
 
     println!("Server running on http://127.0.0.1:10002");
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:10002").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:10002")
+        .await
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
