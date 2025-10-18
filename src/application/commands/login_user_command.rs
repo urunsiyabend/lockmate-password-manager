@@ -3,11 +3,14 @@ use log::error;
 use serde::Deserialize;
 
 use crate::{
-    application::services::auth::{
-        AuthServiceError, create_session_token, hash_password, verify_password,
+    application::services::{
+        auth::{AuthServiceError, create_session_token, hash_password, verify_password},
+        mfa::create_challenge,
     },
     domain::models::user::User,
-    infrastructure::data::repositories::user_repository::UserRepository,
+    infrastructure::data::repositories::{
+        mfa_repository::MfaRepository, user_repository::UserRepository,
+    },
 };
 
 #[derive(Deserialize)]
@@ -50,6 +53,33 @@ pub async fn login_user_command(
 
     let mut sanitized_user: User = user;
     sanitized_user.password = String::new();
+
+    let mfa_repository = MfaRepository::new();
+    if let Some(device) = mfa_repository
+        .get_active_by_user(sanitized_user.id)
+        .await
+        .map_err(|err| {
+            let json_response = serde_json::json!({
+                "status": "error",
+                "message": format!("Failed to load MFA status: {err}"),
+            });
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json_response))
+        })?
+    {
+        if device.enabled {
+            let challenge = create_challenge(sanitized_user.id).await;
+            let json_response = serde_json::json!({
+                "status": "mfa_required",
+                "data": {
+                    "challenge_id": challenge.id,
+                    "expires_at": challenge.expires_at,
+                    "user": sanitized_user,
+                },
+            });
+
+            return Ok((StatusCode::OK, Json(json_response)));
+        }
+    }
 
     let token = create_session_token(sanitized_user.id, &sanitized_user.username).map_err(
         |err: AuthServiceError| {
