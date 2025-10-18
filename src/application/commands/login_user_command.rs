@@ -1,8 +1,11 @@
 use axum::{Json, http::StatusCode, response::IntoResponse};
+use log::error;
 use serde::Deserialize;
 
 use crate::{
-    application::services::auth::{hash_password, verify_password},
+    application::services::auth::{
+        AuthServiceError, create_session_token, hash_password, verify_password,
+    },
     domain::models::user::User,
     infrastructure::data::repositories::user_repository::UserRepository,
 };
@@ -48,9 +51,32 @@ pub async fn login_user_command(
     let mut sanitized_user: User = user;
     sanitized_user.password = String::new();
 
+    let token = create_session_token(sanitized_user.id, &sanitized_user.username).map_err(
+        |err: AuthServiceError| {
+            error!("Failed to create session token: {err}");
+
+            let status = err.status_code();
+            let (status_str, message) = if status.is_server_error() {
+                ("error", "Failed to create session token")
+            } else {
+                ("fail", err.message())
+            };
+
+            let json_response = serde_json::json!({
+                "status": status_str,
+                "message": message,
+            });
+
+            (status, Json(json_response))
+        },
+    )?;
+
     let json_response = serde_json::json!({
         "status": "success",
-        "data": sanitized_user,
+        "data": {
+            "token": token,
+            "user": sanitized_user,
+        },
     });
 
     Ok((StatusCode::OK, Json(json_response)))
