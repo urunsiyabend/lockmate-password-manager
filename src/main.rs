@@ -6,11 +6,13 @@ use api::rest::router::create_router;
 
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{HeaderValue, Method};
+use dotenvy::dotenv;
 use infrastructure::data::db_context::surrealdb_context::init_db;
 use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     println!("▶ About to initialize DB…");
 
     match init_db().await {
