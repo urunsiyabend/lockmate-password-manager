@@ -1,0 +1,26 @@
+{
+  "name": "@lockmate/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript client for the Lockmate Password Manager API",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "lockmate",
+    "password-manager",
+    "sdk"
+  ],
+  "author": "Lockmate Team",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

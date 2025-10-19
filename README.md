@@ -45,6 +45,18 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 If a token is missing, expired, revoked, or invalid, the API responds with a
 `401 Unauthorized` status and a JSON body describing the failure.
 
+## API contract
+
+The full REST contract for version 1 of the service is documented in
+[`docs/api/v1.md`](docs/api/v1.md). It covers authentication, vault management,
+item operations, and sharing workflows.
+
+## TypeScript SDK
+
+A companion SDK is available under [`sdk/`](sdk/). It exposes a lightweight
+client for the documented REST API along with hooks for custom encryption. See
+[`sdk/README.md`](sdk/README.md) for usage instructions.
+
 ## Development scripts
 
 * `cargo fmt` — format the codebase.
