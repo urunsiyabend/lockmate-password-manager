@@ -7,12 +7,18 @@ use api::rest::router::create_router;
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use axum::http::{HeaderValue, Method};
 use dotenvy::dotenv;
-use infrastructure::data::db_context::surrealdb_context::init_db;
+use infrastructure::{data::db_context::surrealdb_context::init_db, telemetry::init_telemetry};
 use tower_http::cors::CorsLayer;
+
+use tracing_subscriber::fmt;
+
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    let _ = fmt::try_init();
+    init_telemetry();
     println!("▶ About to initialize DB…");
 
     match init_db().await {
@@ -36,5 +42,10 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:10002")
         .await
         .unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

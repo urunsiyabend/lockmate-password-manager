@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use std::net::SocketAddr;
 
 use axum::{
     Json,
-    extract::{Extension, Path},
+    extract::{ConnectInfo, Extension, Path},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -12,11 +13,10 @@ use serde_json::{Value, json};
 use surrealdb::{Error, err::Error::Thrown};
 
 use crate::api::rest::middleware::AuthContext;
-use crate::domain::models::audit_entry::NewAuditEntry;
+use crate::application::services::audit::log_audit_event;
 use crate::domain::models::share::{
     NewShareInvitationRecord, NewShareRecord, ShareInvitationRecord, ShareInvitationStatus,
 };
-use crate::infrastructure::data::repositories::audit_entry_repository::AuditEntryRepository;
 use crate::infrastructure::data::repositories::share_repository::ShareRepository;
 use crate::infrastructure::data::repositories::vault_item_repository::VaultItemRepository;
 
@@ -63,6 +63,7 @@ pub struct SharedItemView {
 type ApiError = (StatusCode, Json<Value>);
 
 pub async fn create_share_invitations(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     Path(item_id): Path<String>,
     Json(body): Json<CreateShareInvitationsRequest>,
@@ -154,15 +155,16 @@ pub async fn create_share_invitations(
         created.push(created_invitation);
     }
 
-    log_audit(
-        &owner_id,
+    log_audit_event(
+        owner_id.clone(),
         Some(item_id.clone()),
         "share.invite",
-        json!({
+        Some(addr.ip().to_string()),
+        Some(json!({
             "share_id": share.id,
             "invitation_ids": created.iter().map(|inv| &inv.id).collect::<Vec<_>>(),
             "recipient_ids": created.iter().map(|inv| &inv.recipient_id).collect::<Vec<_>>(),
-        }),
+        })),
     )
     .await;
 
@@ -233,17 +235,19 @@ pub async fn list_pending_invitations(
 }
 
 pub async fn accept_invitation(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     Path(invitation_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    respond_to_invitation(ctx, invitation_id, ShareInvitationStatus::Accepted).await
+    respond_to_invitation(addr, ctx, invitation_id, ShareInvitationStatus::Accepted).await
 }
 
 pub async fn decline_invitation(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     Path(invitation_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
-    respond_to_invitation(ctx, invitation_id, ShareInvitationStatus::Declined).await
+    respond_to_invitation(addr, ctx, invitation_id, ShareInvitationStatus::Declined).await
 }
 
 pub async fn list_share_recipients(
@@ -288,6 +292,7 @@ pub async fn list_share_recipients(
 }
 
 pub async fn revoke_recipient(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     Path((share_id, recipient_id)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ApiError> {
@@ -334,14 +339,15 @@ pub async fn revoke_recipient(
         ));
     }
 
-    log_audit(
-        &owner_id,
+    log_audit_event(
+        owner_id.clone(),
         Some(share.item_id.clone()),
         "share.revoke_recipient",
-        json!({
+        Some(addr.ip().to_string()),
+        Some(json!({
             "share_id": share_id,
             "recipient_id": recipient_id,
-        }),
+        })),
     )
     .await;
 
@@ -352,6 +358,7 @@ pub async fn revoke_recipient(
 }
 
 pub async fn revoke_share(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     Path(share_id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
@@ -393,17 +400,18 @@ pub async fn revoke_share(
         .await
         .map_err(map_db_error)?;
 
-    log_audit(
-        &owner_id,
+    log_audit_event(
+        owner_id.clone(),
         Some(revoked_share.item_id.clone()),
         "share.revoke",
-        json!({
+        Some(addr.ip().to_string()),
+        Some(json!({
             "share_id": share_id,
             "revoked_recipients": revoked_recipients
                 .iter()
                 .map(|inv| &inv.recipient_id)
                 .collect::<Vec<_>>(),
-        }),
+        })),
     )
     .await;
 
@@ -461,6 +469,7 @@ pub async fn list_shared_items(
 }
 
 async fn respond_to_invitation(
+    addr: SocketAddr,
     ctx: AuthContext,
     invitation_id: String,
     status: ShareInvitationStatus,
@@ -536,14 +545,15 @@ async fn respond_to_invitation(
         ShareInvitationStatus::Expired => "share.expired",
     };
 
-    log_audit(
-        &ctx.claims.sub.to_string(),
+    log_audit_event(
+        ctx.claims.sub.to_string(),
         Some(share.item_id.clone()),
         action,
-        json!({
+        Some(addr.ip().to_string()),
+        Some(json!({
             "share_id": invitation.share_id,
             "invitation_id": invitation_id,
-        }),
+        })),
     )
     .await;
 
@@ -587,20 +597,6 @@ fn map_db_error(err: Error) -> ApiError {
     }
 }
 
-async fn log_audit(user_id: &str, vault_item_id: Option<String>, action: &str, metadata: Value) {
-    let repository = AuditEntryRepository::new();
-    let entry = NewAuditEntry {
-        user_id: user_id.to_string(),
-        vault_item_id,
-        action: action.to_string(),
-        ip_address: None,
-        metadata: Some(metadata),
-        occurred_at: Utc::now(),
-    };
-
-    let _ = repository.log(entry).await;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -609,7 +605,9 @@ mod tests {
     use surrealdb::Error;
 
     fn clear_ttl_env() {
-        unsafe { std::env::remove_var("SHARE_INVITATION_TTL_HOURS"); }
+        unsafe {
+            std::env::remove_var("SHARE_INVITATION_TTL_HOURS");
+        }
     }
 
     #[test]
@@ -617,17 +615,25 @@ mod tests {
         clear_ttl_env();
         assert_eq!(invitation_ttl_hours(), DEFAULT_INVITATION_TTL_HOURS);
 
-        unsafe { std::env::set_var("SHARE_INVITATION_TTL_HOURS", "invalid"); }
+        unsafe {
+            std::env::set_var("SHARE_INVITATION_TTL_HOURS", "invalid");
+        }
         assert_eq!(invitation_ttl_hours(), DEFAULT_INVITATION_TTL_HOURS);
 
-        unsafe { std::env::set_var("SHARE_INVITATION_TTL_HOURS", "0"); }
+        unsafe {
+            std::env::set_var("SHARE_INVITATION_TTL_HOURS", "0");
+        }
         assert_eq!(invitation_ttl_hours(), DEFAULT_INVITATION_TTL_HOURS);
 
         clear_ttl_env();
-        unsafe { std::env::set_var("SHARE_INVITATION_TTL_HOURS", "12"); }
+        unsafe {
+            std::env::set_var("SHARE_INVITATION_TTL_HOURS", "12");
+        }
         assert_eq!(invitation_ttl_hours(), 12);
 
-        unsafe { std::env::set_var("SHARE_INVITATION_TTL_HOURS", "168"); }
+        unsafe {
+            std::env::set_var("SHARE_INVITATION_TTL_HOURS", "168");
+        }
         assert_eq!(invitation_ttl_hours(), 168);
 
         clear_ttl_env();

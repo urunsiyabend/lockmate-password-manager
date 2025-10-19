@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Extension, Path},
+    extract::{ConnectInfo, Extension, Path},
     http::{HeaderMap, HeaderName, StatusCode, header::IF_MATCH},
     response::IntoResponse,
 };
@@ -9,8 +9,13 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use surrealdb::{Error, err::Error::Thrown};
 
+use std::net::SocketAddr;
+
 use crate::api::rest::middleware::AuthContext;
-use crate::application::services::vault::{self, VaultDataError};
+use crate::application::services::{
+    audit::log_audit_event,
+    vault::{self, VaultDataError},
+};
 use crate::domain::models::vault_item::{
     NewVaultItemRecord, VaultItemPayload, VaultItemRecord, VaultItemView,
 };
@@ -34,6 +39,7 @@ pub struct VaultItemRequest {
 }
 
 pub async fn create_vault_item(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     headers: HeaderMap,
     Json(body): Json<VaultItemRequest>,
@@ -56,6 +62,18 @@ pub async fn create_vault_item(
 
     let created = repository.create(record).await.map_err(map_db_error)?;
     let decrypted = decrypt_record(&created, &vault_key)?;
+
+    log_audit_event(
+        ctx.claims.sub.to_string(),
+        Some(created.id.clone()),
+        "vault.create",
+        Some(addr.ip().to_string()),
+        Some(json!({
+            "title": body.title,
+            "folder_id": body.folder_id,
+        })),
+    )
+    .await;
 
     Ok((
         StatusCode::CREATED,
@@ -114,6 +132,7 @@ pub async fn get_vault_item(
 }
 
 pub async fn update_vault_item(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     headers: HeaderMap,
     Path(item_id): Path<String>,
@@ -153,6 +172,19 @@ pub async fn update_vault_item(
     };
 
     let decrypted = decrypt_record(&updated, &vault_key)?;
+
+    log_audit_event(
+        ctx.claims.sub.to_string(),
+        Some(updated.id.clone()),
+        "vault.update",
+        Some(addr.ip().to_string()),
+        Some(json!({
+            "title": body.title,
+            "folder_id": body.folder_id,
+        })),
+    )
+    .await;
+
     Ok(Json(json!({
         "status": "success",
         "data": VaultItemView::from_parts(&updated, decrypted),
@@ -160,6 +192,7 @@ pub async fn update_vault_item(
 }
 
 pub async fn delete_vault_item(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Extension(ctx): Extension<AuthContext>,
     headers: HeaderMap,
     Path(item_id): Path<String>,
@@ -185,6 +218,15 @@ pub async fn delete_vault_item(
     if !deleted {
         return Err(conflict_error());
     }
+
+    log_audit_event(
+        ctx.claims.sub.to_string(),
+        Some(item_id.clone()),
+        "vault.delete",
+        Some(addr.ip().to_string()),
+        Some(json!({ "vault_item_id": item_id })),
+    )
+    .await;
 
     Ok(StatusCode::NO_CONTENT)
 }
