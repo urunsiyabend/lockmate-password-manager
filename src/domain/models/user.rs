@@ -8,6 +8,8 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub password: String,
+    pub encryption_public_key: String,
+    pub signature_public_key: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

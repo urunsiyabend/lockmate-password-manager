@@ -1,4 +1,4 @@
-use crate::domain::models::audit_entry::AuditEntry;
+use crate::domain::models::audit_entry::{AuditEntry, NewAuditEntry};
 use crate::infrastructure::data::db_context::surrealdb_context::DB;
 use surrealdb::Error;
 use surrealdb::err::Error::Thrown;
@@ -14,7 +14,7 @@ impl AuditEntryRepository {
         }
     }
 
-    pub async fn log(&self, entry: AuditEntry) -> Result<AuditEntry, Error> {
+    pub async fn log(&self, entry: NewAuditEntry) -> Result<AuditEntry, Error> {
         let mut response = DB
             .query("CREATE type::table($table) CONTENT $content RETURN AFTER")
             .bind(("table", self.table.clone()))
