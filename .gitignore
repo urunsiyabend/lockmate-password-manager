@@ -102,3 +102,19 @@ flake.lock
 /default.nix
 
 # Before adding new lines, see the comment at the top.
+
+# Web client overrides
+!web/
+web/node_modules/
+web/dist/
+!web/package.json
+!web/package-lock.json
+!web/vite.config.ts
+!web/tsconfig.json
+!web/tsconfig.node.json
+!web/index.html
+!web/README.md
+!web/public/
+!web/public/**
+!web/src/
+!web/src/**
