@@ -14,11 +14,8 @@ const DEFINE_VAULT_ITEMS: &str = r#"
 DEFINE TABLE vault_items SCHEMAFULL;
 DEFINE FIELD user_id ON TABLE vault_items TYPE string;
 DEFINE FIELD folder_id ON TABLE vault_items TYPE option<string>;
-DEFINE FIELD title ON TABLE vault_items TYPE string;
-DEFINE FIELD username ON TABLE vault_items TYPE option<string>;
-DEFINE FIELD password ON TABLE vault_items TYPE option<string>;
-DEFINE FIELD url ON TABLE vault_items TYPE option<string>;
-DEFINE FIELD notes ON TABLE vault_items TYPE option<string>;
+DEFINE FIELD ciphertext ON TABLE vault_items TYPE string;
+DEFINE FIELD nonce ON TABLE vault_items TYPE string;
 DEFINE FIELD created_at ON TABLE vault_items TYPE datetime;
 DEFINE FIELD updated_at ON TABLE vault_items TYPE datetime;
 "#;

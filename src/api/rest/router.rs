@@ -1,4 +1,9 @@
-use crate::api::rest::middleware::require_jwt;
+use crate::api::rest::{
+    middleware::require_jwt,
+    vault_items::{
+        create_vault_item, delete_vault_item, get_vault_item, list_vault_items, update_vault_item,
+    },
+};
 use crate::application::commands::{
     create_user_command::create_user_command,
     login_user_command::login_user_command,
@@ -41,12 +46,23 @@ pub fn create_router() -> Router {
         .merge(protected_users_router)
         .nest("/mfa", mfa_router);
 
+    let vault_items_router = Router::new()
+        .route("/", get(list_vault_items).post(create_vault_item))
+        .route(
+            "/:item_id/",
+            get(get_vault_item)
+                .put(update_vault_item)
+                .delete(delete_vault_item),
+        )
+        .layer(middleware::from_fn(require_jwt));
+
     let api_router = Router::new()
         .route(
             "/healthcheck/",
             get(crate::api::rest::healthcheck::health_checker_handler),
         )
-        .nest("/users", users_router);
+        .nest("/users", users_router)
+        .nest("/vault/items", vault_items_router);
 
     Router::new().nest("/api", api_router)
 }
