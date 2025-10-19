@@ -1,9 +1,11 @@
-use axum::{Json, http::StatusCode, response::IntoResponse};
+use axum::{Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use log::error;
 use serde::Deserialize;
+use std::net::SocketAddr;
 
 use crate::{
     application::services::{
+        audit::log_login_attempt,
         auth::{AuthServiceError, create_session_token, hash_password, verify_password},
         mfa::create_challenge,
     },
@@ -20,30 +22,61 @@ pub struct LoginRequest {
 }
 
 pub async fn login_user_command(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(body): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let repository = UserRepository::new();
+    let ip_address = Some(addr.ip().to_string());
 
-    let user = repository
-        .get_by_username(&body.username)
-        .await
-        .map_err(|_| {
+    let user = match repository.get_by_username(&body.username).await {
+        Ok(user) => user,
+        Err(_) => {
+            log_login_attempt(
+                None,
+                "unknown_user",
+                ip_address.clone(),
+                Some(serde_json::json!({ "username": body.username })),
+            )
+            .await;
+
             let json_response = serde_json::json!({
                 "status": "fail",
                 "message": "Invalid username or password",
             });
-            (StatusCode::UNAUTHORIZED, Json(json_response))
-        })?;
 
-    let password_is_valid = verify_password(&body.password, &user.password).map_err(|_| {
-        let json_response = serde_json::json!({
-            "status": "error",
-            "message": "Failed to verify password",
-        });
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(json_response))
-    })?;
+            return Err((StatusCode::UNAUTHORIZED, Json(json_response)));
+        }
+    };
+
+    let password_is_valid = match verify_password(&body.password, &user.password) {
+        Ok(valid) => valid,
+        Err(_) => {
+            log_login_attempt(
+                Some(user.id),
+                "error",
+                ip_address.clone(),
+                Some(serde_json::json!({ "reason": "password_verification_failed" })),
+            )
+            .await;
+
+            let json_response = serde_json::json!({
+                "status": "error",
+                "message": "Failed to verify password",
+            });
+
+            return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json_response)));
+        }
+    };
 
     if !password_is_valid {
+        log_login_attempt(
+            Some(user.id),
+            "failure",
+            ip_address.clone(),
+            Some(serde_json::json!({ "reason": "invalid_password" })),
+        )
+        .await;
+
         let json_response = serde_json::json!({
             "status": "fail",
             "message": "Invalid username or password",
@@ -51,12 +84,12 @@ pub async fn login_user_command(
         return Err((StatusCode::UNAUTHORIZED, Json(json_response)));
     }
 
-    let mut sanitized_user: User = user;
+    let mut sanitized_user: User = user.clone();
     sanitized_user.password = String::new();
 
     let mfa_repository = MfaRepository::new();
     if let Some(device) = mfa_repository
-        .get_active_by_user(sanitized_user.id)
+        .get_active_by_user(user.id)
         .await
         .map_err(|err| {
             let json_response = serde_json::json!({
@@ -68,6 +101,13 @@ pub async fn login_user_command(
     {
         if device.enabled {
             let challenge = create_challenge(sanitized_user.id).await;
+            log_login_attempt(
+                Some(sanitized_user.id),
+                "mfa_required",
+                ip_address.clone(),
+                Some(serde_json::json!({ "challenge_id": challenge.id })),
+            )
+            .await;
             let json_response = serde_json::json!({
                 "status": "mfa_required",
                 "data": {
@@ -100,6 +140,8 @@ pub async fn login_user_command(
             (status, Json(json_response))
         },
     )?;
+
+    log_login_attempt(Some(sanitized_user.id), "success", ip_address, None).await;
 
     let json_response = serde_json::json!({
         "status": "success",

@@ -32,7 +32,11 @@ DEFINE FIELD updated_at ON TABLE vault_items TYPE datetime;
 "#;
 
 const DEFINE_AUDIT_ENTRIES: &str = r#"
-DEFINE TABLE audit_entries SCHEMAFULL;
+DEFINE TABLE audit_entries SCHEMAFULL PERMISSIONS
+    FOR select FULL,
+    FOR create FULL,
+    FOR update NONE,
+    FOR delete NONE;
 DEFINE FIELD user_id ON TABLE audit_entries TYPE string;
 DEFINE FIELD vault_item_id ON TABLE audit_entries TYPE option<string>;
 DEFINE FIELD action ON TABLE audit_entries TYPE string;

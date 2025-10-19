@@ -1,4 +1,5 @@
 use crate::api::rest::{
+    admin::list_audit_logs,
     middleware::require_jwt,
     shares::{
         accept_invitation, create_share_invitations, decline_invitation, list_pending_invitations,
@@ -21,6 +22,7 @@ use crate::application::commands::{
 use crate::application::queries::{
     get_all_users_query::get_all_users_query, mfa_status_query::get_mfa_status,
 };
+use crate::infrastructure::telemetry::metrics_handler;
 use axum::{
     Router, middleware,
     routing::{delete, get, post},
@@ -80,6 +82,10 @@ pub fn create_router() -> Router {
         .route("/shared-items/", get(list_shared_items))
         .layer(middleware::from_fn(require_jwt));
 
+    let admin_router = Router::new()
+        .route("/audit/logs/", get(list_audit_logs))
+        .layer(middleware::from_fn(require_jwt));
+
     let api_router = Router::new()
         .route(
             "/healthcheck/",
@@ -89,7 +95,10 @@ pub fn create_router() -> Router {
         .nest("/vault/items", vault_items_router)
         .nest("/shares", shares_router)
         .nest("/invitations", invitations_router)
-        .nest("/me", me_router);
+        .nest("/me", me_router)
+        .nest("/admin", admin_router);
 
-    Router::new().nest("/api", api_router)
+    Router::new()
+        .route("/metrics", get(metrics_handler))
+        .nest("/api", api_router)
 }
