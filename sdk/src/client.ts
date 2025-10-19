@@ -240,7 +240,10 @@ export class LockmateClient {
     }
   }
 
-  private async request<T>(path: string, init: RequestInit & { body?: unknown } = {}): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: Omit<RequestInit, "body"> & { body?: unknown } = {}
+  ): Promise<T> {
     const url = new URL(path, this.baseUrl).toString();
     const headers = new Headers(init.headers ?? {});
 
@@ -374,7 +377,7 @@ function atobPolyfill(value: string): string {
     throw new Error("Invalid base64 string");
   }
   let bc = 0;
-  let bs: number;
+  let bs = 0;
   let buffer: number;
   let idx = 0;
   for (; (buffer = str.charCodeAt(idx++)); ) {
