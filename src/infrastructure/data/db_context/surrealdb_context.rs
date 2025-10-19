@@ -1,3 +1,4 @@
+use super::schema::ensure_schema;
 use once_cell::sync::Lazy;
 use surrealdb::{
     Surreal,
@@ -26,6 +27,10 @@ pub(crate) async fn init_db() -> Result<(), surrealdb::Error> {
     println!("▶ Selecting namespace+database…");
     let _ = DB.use_ns("users").use_db("users").await?;
     println!("✔ Namespace ‘users’ and database ‘users’ selected");
+
+    println!("▶ Ensuring core schema exists…");
+    ensure_schema().await?;
+    println!("✔ Schema ready");
 
     Ok(())
 }
