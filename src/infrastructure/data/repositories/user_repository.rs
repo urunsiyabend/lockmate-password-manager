@@ -1,8 +1,9 @@
 use crate::domain::models::user::User;
 use crate::infrastructure::data::db_context::surrealdb_context::DB;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use surrealdb::Error;
 use surrealdb::err::Error::Thrown;
+use surrealdb::sql::Datetime;
 
 pub struct UserRepository {
     table: String,
@@ -29,8 +30,36 @@ impl UserRepository {
         Err(error)
     }
 
-    pub async fn add_user(&self, content: User) -> Result<Vec<User>, Error> {
-        let opt_records = DB.create(&self.table).content(content).await?;
+    pub async fn add_user(&self, user: User) -> Result<Vec<User>, Error> {
+        #[derive(Serialize)]
+        struct DbUser {
+            id: i32,
+            username: String,
+            email: String,
+            password: String,
+            encryption_public_key: String,
+            signature_public_key: String,
+            created_at: Datetime,
+            updated_at: Datetime,
+        }
+
+        impl From<&User> for DbUser {
+            fn from(user: &User) -> Self {
+                Self {
+                    id: user.id,
+                    username: user.username.clone(),
+                    email: user.email.clone(),
+                    password: user.password.clone(),
+                    encryption_public_key: user.encryption_public_key.clone(),
+                    signature_public_key: user.signature_public_key.clone(),
+                    created_at: user.created_at.into(),
+                    updated_at: user.updated_at.into(),
+                }
+            }
+        }
+
+        let payload = DbUser::from(&user);
+        let opt_records = DB.create(&self.table).content(payload).await?;
         match opt_records {
             Some(records) => Ok(records),
             None => Err(Error::Db(Thrown("Failed to insert user".into()))),
