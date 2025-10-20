@@ -66,6 +66,19 @@ DEFINE FIELD responded_at ON TABLE share_invitations TYPE option<datetime>;
 DEFINE FIELD revoked_at ON TABLE share_invitations TYPE option<datetime>;
 "#;
 
+const DEFINE_SECURITY_HEALTH_FINDINGS: &str = r#"
+DEFINE TABLE security_health_findings SCHEMAFULL;
+DEFINE FIELD user_id ON TABLE security_health_findings TYPE string;
+DEFINE FIELD kind ON TABLE security_health_findings TYPE string;
+DEFINE FIELD severity ON TABLE security_health_findings TYPE string;
+DEFINE FIELD title ON TABLE security_health_findings TYPE string;
+DEFINE FIELD description ON TABLE security_health_findings TYPE string;
+DEFINE FIELD remediation ON TABLE security_health_findings TYPE string;
+DEFINE FIELD vault_item_ids ON TABLE security_health_findings TYPE array<string>;
+DEFINE FIELD metadata ON TABLE security_health_findings TYPE option<object>;
+DEFINE FIELD created_at ON TABLE security_health_findings TYPE datetime;
+"#;
+
 pub async fn ensure_schema() -> Result<(), Error> {
     DB.query(DEFINE_USERS).await?;
     DB.query(DEFINE_VAULT_FOLDERS).await?;
@@ -73,5 +86,6 @@ pub async fn ensure_schema() -> Result<(), Error> {
     DB.query(DEFINE_AUDIT_ENTRIES).await?;
     DB.query(DEFINE_SHARES).await?;
     DB.query(DEFINE_SHARE_INVITATIONS).await?;
+    DB.query(DEFINE_SECURITY_HEALTH_FINDINGS).await?;
     Ok(())
 }

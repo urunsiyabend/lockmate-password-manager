@@ -127,4 +127,63 @@ export interface AcceptShareResponse {
     status: "active";
     created_at: string;
 }
+export type PasswordStrengthScore = "very_weak" | "weak" | "moderate" | "strong" | "very_strong";
+export interface PasswordComplexity {
+    has_lowercase: boolean;
+    has_uppercase: boolean;
+    has_numbers: boolean;
+    has_symbols: boolean;
+}
+export interface PasswordStrengthReport {
+    length: number;
+    entropy_bits: number;
+    charset_size: number;
+    crack_time_seconds: number;
+    score: PasswordStrengthScore;
+    complexity: PasswordComplexity;
+    suggestions: string[];
+}
+export interface GeneratedPassword {
+    password: string;
+    strength: PasswordStrengthReport;
+}
+export interface PasswordGenerationOptions {
+    word_count?: number;
+    separator?: string;
+    capitalize?: boolean;
+    include_number?: boolean;
+    number_digits?: number;
+    include_symbol?: boolean;
+    symbol_set?: string;
+}
+export type SecurityHealthFindingKind = "breached_credential" | "reused_credential";
+export type SecurityHealthSeverity = "low" | "medium" | "high";
+export interface SecurityHealthAffectedItem {
+    id: string;
+    title?: string;
+    username?: string;
+    url?: string;
+}
+export interface SecurityHealthMetadata {
+    issue?: string;
+    breach_count?: number;
+    item_count?: number;
+    affected_items?: SecurityHealthAffectedItem[];
+    [key: string]: unknown;
+}
+export interface SecurityHealthFinding {
+    id: string;
+    kind: SecurityHealthFindingKind;
+    severity: SecurityHealthSeverity;
+    title: string;
+    description: string;
+    remediation: string;
+    vault_item_ids: string[];
+    metadata?: SecurityHealthMetadata;
+    created_at: string;
+}
+export interface SecurityHealthSummary {
+    findings: SecurityHealthFinding[];
+    generated_at: string;
+}
 //# sourceMappingURL=types.d.ts.map

@@ -1,5 +1,6 @@
 pub mod audit_entry_repository;
 pub mod mfa_repository;
+pub mod security_health_repository;
 pub mod share_repository;
 pub mod user_repository;
 pub mod vault_folder_repository;

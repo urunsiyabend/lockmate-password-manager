@@ -1,6 +1,7 @@
 use crate::api::rest::{
     admin::list_audit_logs,
     middleware::require_jwt,
+    security::{get_security_health, run_security_health_check},
     shares::{
         accept_invitation, create_share_invitations, decline_invitation, list_pending_invitations,
         list_share_recipients, list_shared_items, revoke_recipient, revoke_share,
@@ -95,6 +96,13 @@ pub fn create_router() -> Router {
 
     let tools_router = Router::new().nest("/password", password_tools_router);
 
+    let security_router = Router::new()
+        .route("/health", get(get_security_health))
+        .route("/health/", get(get_security_health))
+        .route("/check", post(run_security_health_check))
+        .route("/check/", post(run_security_health_check))
+        .layer(middleware::from_fn(require_jwt));
+
     let api_v1_router = Router::new()
         .route(
             "/healthcheck/",
@@ -106,7 +114,8 @@ pub fn create_router() -> Router {
         .nest("/invitations", invitations_router)
         .nest("/me", me_router)
         .nest("/admin", admin_router)
-        .nest("/tools", tools_router);
+        .nest("/tools", tools_router)
+        .nest("/security", security_router);
 
     Router::new()
         .route("/metrics", get(metrics_handler))

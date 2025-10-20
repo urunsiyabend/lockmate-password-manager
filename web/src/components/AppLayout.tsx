@@ -23,6 +23,10 @@ export default function AppLayout({ children }: PropsWithChildren): JSX.Element 
         <Link to="/vaults" className="brand">
           Lockmate Web
         </Link>
+        <nav className="main-nav">
+          <Link to="/vaults">Vaults</Link>
+          <Link to="/security">Security Center</Link>
+        </nav>
         <div className="user-controls">
           {user && <span className="user-name">Signed in as {user.username}</span>}
           <button type="button" onClick={handleLogout} disabled={isLoggingOut}>
