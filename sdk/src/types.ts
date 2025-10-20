@@ -187,3 +187,39 @@ export interface PasswordGenerationOptions {
   include_symbol?: boolean;
   symbol_set?: string;
 }
+
+export type SecurityHealthFindingKind = "breached_credential" | "reused_credential";
+
+export type SecurityHealthSeverity = "low" | "medium" | "high";
+
+export interface SecurityHealthAffectedItem {
+  id: string;
+  title?: string;
+  username?: string;
+  url?: string;
+}
+
+export interface SecurityHealthMetadata {
+  issue?: string;
+  breach_count?: number;
+  item_count?: number;
+  affected_items?: SecurityHealthAffectedItem[];
+  [key: string]: unknown;
+}
+
+export interface SecurityHealthFinding {
+  id: string;
+  kind: SecurityHealthFindingKind;
+  severity: SecurityHealthSeverity;
+  title: string;
+  description: string;
+  remediation: string;
+  vault_item_ids: string[];
+  metadata?: SecurityHealthMetadata;
+  created_at: string;
+}
+
+export interface SecurityHealthSummary {
+  findings: SecurityHealthFinding[];
+  generated_at: string;
+}

@@ -21,7 +21,8 @@ import {
   VaultUpdateRequest,
   AuthTokens,
   UserProfile,
-  EncryptedVaultItemPayload
+  EncryptedVaultItemPayload,
+  SecurityHealthSummary
 } from "./types";
 
 const GLOBAL_FETCH: FetchLike | undefined = typeof fetch === "function" ? fetch.bind(globalThis) : undefined;
@@ -228,6 +229,31 @@ export class LockmateClient {
       method: "POST",
       body: { password }
     });
+  }
+
+  async getSecurityHealth(): Promise<SecurityHealthSummary> {
+    const response = await this.request<{ status: string; data: SecurityHealthSummary }>(
+      "/security/health"
+    );
+    return response.data;
+  }
+
+  async runSecurityHealthCheck(vaultKey: string): Promise<SecurityHealthSummary> {
+    if (!vaultKey || vaultKey.trim().length === 0) {
+      throw new Error("vaultKey is required to perform a security health check");
+    }
+
+    const response = await this.request<{ status: string; data: SecurityHealthSummary }>(
+      "/security/check",
+      {
+        method: "POST",
+        headers: {
+          "X-Vault-Key": vaultKey
+        }
+      }
+    );
+
+    return response.data;
   }
 
   private async encryptItem(draft: VaultItemDraft): Promise<EncryptedVaultItemPayload> {

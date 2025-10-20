@@ -1,4 +1,4 @@
-import { AcceptShareRequest, AcceptShareResponse, LockmateClientConfig, LoginRequest, LoginResponse, PaginatedResponse, RegisterRequest, ShareInviteRequest, ShareRecord, ShareUpdateRequest, VaultCreateRequest, VaultItemDraft, VaultItemRecord, VaultSummary, VaultUpdateRequest, AuthTokens, UserProfile } from "./types";
+import { AcceptShareRequest, AcceptShareResponse, LockmateClientConfig, LoginRequest, LoginResponse, PaginatedResponse, GeneratedPassword, RegisterRequest, ShareInviteRequest, ShareRecord, ShareUpdateRequest, PasswordGenerationOptions, PasswordStrengthReport, VaultCreateRequest, VaultItemDraft, VaultItemRecord, VaultSummary, VaultUpdateRequest, AuthTokens, UserProfile, SecurityHealthSummary } from "./types";
 export declare class LockmateError extends Error {
     readonly status: number;
     readonly details: unknown;
@@ -43,6 +43,10 @@ export declare class LockmateClient {
     updateVaultShare(vaultId: string, shareId: string, update: ShareUpdateRequest): Promise<ShareRecord>;
     deleteVaultShare(vaultId: string, shareId: string): Promise<void>;
     acceptShare(shareId: string, body: AcceptShareRequest): Promise<AcceptShareResponse>;
+    generatePassword(options?: PasswordGenerationOptions): Promise<GeneratedPassword>;
+    evaluatePasswordStrength(password: string): Promise<PasswordStrengthReport>;
+    getSecurityHealth(): Promise<SecurityHealthSummary>;
+    runSecurityHealthCheck(vaultKey: string): Promise<SecurityHealthSummary>;
     private encryptItem;
     private decryptItem;
     private request;

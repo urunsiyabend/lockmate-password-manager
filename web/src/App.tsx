@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage.tsx";
 import VaultDetailPage from "./pages/VaultDetailPage.tsx";
 import VaultItemPage from "./pages/VaultItemPage.tsx";
 import VaultListPage from "./pages/VaultListPage.tsx";
+import SecurityCenterPage from "./pages/SecurityCenterPage.tsx";
 
 function RequireAuth(): JSX.Element {
   const { isAuthenticated } = useAuth();
@@ -33,6 +34,7 @@ export default function App(): JSX.Element {
       />
       <Route element={<RequireAuth />}>
         <Route element={<LayoutOutlet />}>
+          <Route path="/security" element={<SecurityCenterPage />} />
           <Route path="/vaults" element={<VaultListPage />} />
           <Route path="/vaults/:vaultId" element={<VaultDetailPage />} />
           <Route path="/vaults/:vaultId/items/:itemId" element={<VaultItemPage />} />

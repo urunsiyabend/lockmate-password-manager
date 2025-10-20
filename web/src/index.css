@@ -141,6 +141,25 @@ button:hover:not(:disabled) {
   color: #1d4ed8;
 }
 
+.main-nav {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.main-nav a {
+  font-weight: 600;
+  color: #1e293b;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.main-nav a:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
+
 .user-controls {
   display: flex;
   align-items: center;
@@ -180,6 +199,98 @@ button:hover:not(:disabled) {
 .panel-header p {
   margin: 0;
   color: #475569;
+}
+
+.security-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.generated-at {
+  margin-top: 0.35rem;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.health-empty {
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  border: 1px solid #e2e8f0;
+}
+
+.health-findings {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.health-finding {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.health-finding header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.severity-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.health-finding--low .severity-badge {
+  background-color: rgba(5, 150, 105, 0.15);
+  color: #047857;
+}
+
+.health-finding--medium .severity-badge {
+  background-color: rgba(249, 115, 22, 0.18);
+  color: #ea580c;
+}
+
+.health-finding--high .severity-badge {
+  background-color: rgba(239, 68, 68, 0.18);
+  color: #dc2626;
+}
+
+.remediation {
+  margin: 0;
+  color: #1e293b;
+}
+
+.metadata-note {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.affected-items {
+  list-style: none;
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #1e293b;
+}
+
+.affected-items li {
+  margin-bottom: 0.35rem;
 }
 
 .vault-list {

@@ -80,7 +80,7 @@ export async function deriveMasterKeyFromPassword(
       name: "AES-GCM",
       length: 256
     },
-    false,
+    true,
     ["encrypt", "decrypt"]
   );
 }
@@ -110,6 +110,13 @@ export async function encryptVaultItemDraft(
     checksum,
     ciphertext: bytesToBase64(payload)
   };
+}
+
+export async function exportKeyToBase64(key: CryptoKey): Promise<string> {
+  const crypto = getCrypto();
+  const raw = await crypto.subtle.exportKey("raw", key);
+  const bytes = new Uint8Array(raw);
+  return bytesToBase64(bytes);
 }
 
 export async function decryptVaultItemRecord(

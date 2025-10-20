@@ -156,6 +156,34 @@ export class LockmateClient {
             body
         });
     }
+    async generatePassword(options) {
+        return this.request("/tools/password/generate", {
+            method: "POST",
+            body: options ?? {}
+        });
+    }
+    async evaluatePasswordStrength(password) {
+        return this.request("/tools/password/strength", {
+            method: "POST",
+            body: { password }
+        });
+    }
+    async getSecurityHealth() {
+        const response = await this.request("/security/health");
+        return response.data;
+    }
+    async runSecurityHealthCheck(vaultKey) {
+        if (!vaultKey || vaultKey.trim().length === 0) {
+            throw new Error("vaultKey is required to perform a security health check");
+        }
+        const response = await this.request("/security/check", {
+            method: "POST",
+            headers: {
+                "X-Vault-Key": vaultKey
+            }
+        });
+        return response.data;
+    }
     async encryptItem(draft) {
         if (this.encryption?.encryptItem) {
             return this.encryption.encryptItem(draft);

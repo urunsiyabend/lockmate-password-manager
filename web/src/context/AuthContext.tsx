@@ -11,13 +11,15 @@ import {
 import {
   decryptVaultItemRecord,
   deriveMasterKeyFromPassword,
-  encryptVaultItemDraft
+  encryptVaultItemDraft,
+  exportKeyToBase64
 } from "../lib/encryption.ts";
 
 interface AuthState {
   user?: UserProfile;
   tokens?: AuthTokens;
   keySalt?: string;
+  vaultKey?: string;
 }
 
 interface AuthContextValue extends AuthState {
@@ -81,14 +83,17 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
       client.setToken(response.token);
 
       let masterKey: CryptoKey | undefined;
+      let vaultKey: string | undefined;
       if (response.key_salt) {
         masterKey = await deriveMasterKeyFromPassword(password, response.key_salt);
+        vaultKey = await exportKeyToBase64(masterKey);
       }
       masterKeyRef.current = masterKey;
 
       setState({
         user: response.user,
         keySalt: response.key_salt,
+        vaultKey,
         tokens: {
           token: response.token,
           refreshToken: response.refreshToken,
