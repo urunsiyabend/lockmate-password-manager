@@ -1,6 +1,6 @@
 import { LockmateError } from "@lockmate/sdk";
-import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.tsx";
 
 function extractErrorMessage(error: unknown): string {
@@ -20,10 +20,23 @@ function extractErrorMessage(error: unknown): string {
 export default function LoginPage(): JSX.Element {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as { registered?: boolean; username?: string } | undefined;
+    if (state?.registered) {
+      setSuccessMessage("Your account has been created. You can sign in now.");
+      if (state.username) {
+        setUsername(state.username);
+      }
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location, navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -48,6 +61,7 @@ export default function LoginPage(): JSX.Element {
           Sign in to load your vaults. Secrets are decrypted locally in your browser using
           your master password.
         </p>
+        {successMessage && <p className="success-text">{successMessage}</p>}
         <form onSubmit={handleSubmit} className="auth-form">
           <label className="field">
             <span>Username</span>
@@ -74,6 +88,9 @@ export default function LoginPage(): JSX.Element {
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p className="auth-helper">
+          Don’t have an account? <Link to="/register">Create one</Link>.
+        </p>
       </div>
     </div>
   );

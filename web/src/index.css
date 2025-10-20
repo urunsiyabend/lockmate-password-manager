@@ -120,6 +120,23 @@ button:hover:not(:disabled) {
   font-size: 0.95rem;
 }
 
+.success-text {
+  margin: 0;
+  color: #16a34a;
+  font-size: 0.95rem;
+}
+
+.auth-helper {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.auth-helper a {
+  color: #2563eb;
+  font-weight: 600;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
