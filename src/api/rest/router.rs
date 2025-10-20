@@ -12,7 +12,6 @@ use crate::api::rest::{
     },
 };
 use crate::application::commands::{
-    create_user_command::create_user_command,
     login_user_command::login_user_command,
     logout_user_command::logout_user_command,
     mfa::{
@@ -20,6 +19,7 @@ use crate::application::commands::{
         login_verify::verify_mfa_login, revoke_device::revoke_mfa_device,
         rotate_recovery_codes::rotate_recovery_codes,
     },
+    register_user_command::register_user_command,
 };
 use crate::application::queries::{
     get_all_users_query::get_all_users_query, mfa_status_query::get_mfa_status,
@@ -33,8 +33,19 @@ use axum::{
 pub fn create_router() -> Router {
     let protected_users_router = Router::new()
         .route("/", get(get_all_users_query))
+        .layer(middleware::from_fn(require_jwt));
+
+    let protected_auth_router = Router::new()
+        .route("/logout", post(logout_user_command))
         .route("/logout/", post(logout_user_command))
         .layer(middleware::from_fn(require_jwt));
+
+    let auth_router = Router::new()
+        .route("/register", post(register_user_command))
+        .route("/register/", post(register_user_command))
+        .route("/login", post(login_user_command))
+        .route("/login/", post(login_user_command))
+        .merge(protected_auth_router);
 
     let protected_mfa_router = Router::new()
         .route("/status/", get(get_mfa_status))
@@ -49,7 +60,7 @@ pub fn create_router() -> Router {
         .merge(protected_mfa_router);
 
     let users_router = Router::new()
-        .route("/", post(create_user_command))
+        .route("/", post(register_user_command))
         .route("/login/", post(login_user_command))
         .merge(protected_users_router)
         .nest("/mfa", mfa_router);
@@ -108,6 +119,7 @@ pub fn create_router() -> Router {
             "/healthcheck/",
             get(crate::api::rest::healthcheck::health_checker_handler),
         )
+        .nest("/auth", auth_router)
         .nest("/users", users_router)
         .nest("/vault/items", vault_items_router)
         .nest("/shares", shares_router)

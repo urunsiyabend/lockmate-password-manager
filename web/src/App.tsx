@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.tsx";
 import AppLayout from "./components/AppLayout.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
+import RegisterPage from "./pages/RegisterPage.tsx";
 import VaultDetailPage from "./pages/VaultDetailPage.tsx";
 import VaultItemPage from "./pages/VaultItemPage.tsx";
 import VaultListPage from "./pages/VaultListPage.tsx";
@@ -31,6 +32,10 @@ export default function App(): JSX.Element {
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/vaults" replace /> : <LoginPage />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to="/vaults" replace /> : <RegisterPage />}
       />
       <Route element={<RequireAuth />}>
         <Route element={<LayoutOutlet />}>

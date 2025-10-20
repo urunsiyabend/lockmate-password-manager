@@ -1,4 +1,4 @@
-import { LockmateClient, AuthTokens, UserProfile } from "@lockmate/sdk";
+import { LockmateClient, AuthTokens, UserProfile, RegisterRequest } from "@lockmate/sdk";
 import {
   PropsWithChildren,
   createContext,
@@ -26,6 +26,7 @@ interface AuthContextValue extends AuthState {
   client: LockmateClient;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
+  register: (input: RegisterRequest) => Promise<UserProfile>;
   logout: () => Promise<void>;
 }
 
@@ -104,6 +105,14 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     [client]
   );
 
+  const register = useCallback(
+    async (input: RegisterRequest) => {
+      const profile = await client.register(input);
+      return profile;
+    },
+    [client]
+  );
+
   const logout = useCallback(async () => {
     const refreshToken = state.tokens?.refreshToken;
     if (refreshToken) {
@@ -125,12 +134,14 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     keySalt: state.keySalt,
     isAuthenticated: Boolean(state.tokens?.token),
     login,
+    register,
     logout
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
