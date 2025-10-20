@@ -7,10 +7,13 @@ import {
   LoginRequest,
   LoginResponse,
   PaginatedResponse,
+  GeneratedPassword,
   RegisterRequest,
   ShareInviteRequest,
   ShareRecord,
   ShareUpdateRequest,
+  PasswordGenerationOptions,
+  PasswordStrengthReport,
   VaultCreateRequest,
   VaultItemDraft,
   VaultItemRecord,
@@ -210,6 +213,20 @@ export class LockmateClient {
     return this.request<AcceptShareResponse>(`/shares/${shareId}/accept`, {
       method: "POST",
       body
+    });
+  }
+
+  async generatePassword(options?: PasswordGenerationOptions): Promise<GeneratedPassword> {
+    return this.request<GeneratedPassword>("/tools/password/generate", {
+      method: "POST",
+      body: options ?? {}
+    });
+  }
+
+  async evaluatePasswordStrength(password: string): Promise<PasswordStrengthReport> {
+    return this.request<PasswordStrengthReport>("/tools/password/strength", {
+      method: "POST",
+      body: { password }
     });
   }
 
