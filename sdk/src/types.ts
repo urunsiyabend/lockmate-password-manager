@@ -148,3 +148,42 @@ export interface AcceptShareResponse {
   status: "active";
   created_at: string;
 }
+
+export type PasswordStrengthScore =
+  | "very_weak"
+  | "weak"
+  | "moderate"
+  | "strong"
+  | "very_strong";
+
+export interface PasswordComplexity {
+  has_lowercase: boolean;
+  has_uppercase: boolean;
+  has_numbers: boolean;
+  has_symbols: boolean;
+}
+
+export interface PasswordStrengthReport {
+  length: number;
+  entropy_bits: number;
+  charset_size: number;
+  crack_time_seconds: number;
+  score: PasswordStrengthScore;
+  complexity: PasswordComplexity;
+  suggestions: string[];
+}
+
+export interface GeneratedPassword {
+  password: string;
+  strength: PasswordStrengthReport;
+}
+
+export interface PasswordGenerationOptions {
+  word_count?: number;
+  separator?: string;
+  capitalize?: boolean;
+  include_number?: boolean;
+  number_digits?: number;
+  include_symbol?: boolean;
+  symbol_set?: string;
+}

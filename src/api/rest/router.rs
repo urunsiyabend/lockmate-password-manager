@@ -5,6 +5,7 @@ use crate::api::rest::{
         accept_invitation, create_share_invitations, decline_invitation, list_pending_invitations,
         list_share_recipients, list_shared_items, revoke_recipient, revoke_share,
     },
+    tools::{generate_password, password_strength},
     vault_items::{
         create_vault_item, delete_vault_item, get_vault_item, list_vault_items, update_vault_item,
     },
@@ -86,7 +87,15 @@ pub fn create_router() -> Router {
         .route("/audit/logs/", get(list_audit_logs))
         .layer(middleware::from_fn(require_jwt));
 
-    let api_router = Router::new()
+    let password_tools_router = Router::new()
+        .route("/generate", post(generate_password))
+        .route("/generate/", post(generate_password))
+        .route("/strength", post(password_strength))
+        .route("/strength/", post(password_strength));
+
+    let tools_router = Router::new().nest("/password", password_tools_router);
+
+    let api_v1_router = Router::new()
         .route(
             "/healthcheck/",
             get(crate::api::rest::healthcheck::health_checker_handler),
@@ -96,9 +105,11 @@ pub fn create_router() -> Router {
         .nest("/shares", shares_router)
         .nest("/invitations", invitations_router)
         .nest("/me", me_router)
-        .nest("/admin", admin_router);
+        .nest("/admin", admin_router)
+        .nest("/tools", tools_router);
 
     Router::new()
         .route("/metrics", get(metrics_handler))
-        .nest("/api", api_router)
+        .nest("/api", api_v1_router.clone())
+        .nest("/api/v1", api_v1_router)
 }
