@@ -24,31 +24,30 @@ function LayoutOutlet(): JSX.Element {
   );
 }
 
+// App.tsx
 export default function App(): JSX.Element {
-  const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
-  return (
-    <Routes>
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/vaults" replace /> : <LoginPage />}
-      />
-      <Route
-        path="/register"
-        element={isAuthenticated ? <Navigate to="/vaults" replace /> : <RegisterPage />}
-      />
-      <Route element={<RequireAuth />}>
-        <Route element={<LayoutOutlet />}>
-          <Route path="/security" element={<SecurityCenterPage />} />
-          <Route path="/vaults" element={<VaultListPage />} />
-          <Route path="/vaults/:vaultId" element={<VaultDetailPage />} />
-          <Route path="/vaults/:vaultId/items/:itemId" element={<VaultItemPage />} />
-        </Route>
-      </Route>
-      <Route
-        path="*"
-        element={<Navigate to={isAuthenticated ? "/vaults" : "/login"} replace />}
-      />
-    </Routes>
-  );
+    return (
+        <Routes>
+            <Route path="login" element={isAuthenticated ? <Navigate to="/vaults" replace /> : <LoginPage />} />
+            <Route path="register" element={isAuthenticated ? <Navigate to="/vaults" replace /> : <RegisterPage />} />
+
+
+            {/* Protected area */}
+            <Route element={<RequireAuth />}>
+                <Route element={<LayoutOutlet />}>
+                    <Route path="security" element={<SecurityCenterPage />} />
+                    <Route path="vaults" element={<VaultListPage />} />
+                    <Route path="vaults/:vaultId" element={<VaultDetailPage />} />
+                    <Route path="vaults/:vaultId/items/:itemId" element={<VaultItemPage />} />
+                </Route>
+            </Route>
+
+            <Route
+                path="*"
+                element={<Navigate to={isAuthenticated ? "/vaults" : "/login"} replace />}
+            />
+        </Routes>
+    );
 }

@@ -1,4 +1,4 @@
-import { LockmateClient, AuthTokens, UserProfile, RegisterRequest } from "@lockmate/sdk";
+import { LockmateClient, UserProfile, RegisterRequest, VaultItemDraft, VaultItemRecord } from "@lockmate/sdk";
 import {
   PropsWithChildren,
   createContext,
@@ -15,14 +15,20 @@ import {
   exportKeyToBase64
 } from "../lib/encryption.ts";
 
+type AppAuthTokens = {
+  token: string;
+  refreshToken?: string;
+  expiresAt?: string;
+};
+
 interface AuthState {
   user?: UserProfile;
-  tokens?: AuthTokens;
+  tokens?: AppAuthTokens;
   keySalt?: string;
   vaultKey?: string;
 }
 
-interface AuthContextValue extends AuthState {
+export interface AuthContextValue extends AuthState {
   client: LockmateClient;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
@@ -41,76 +47,99 @@ function resolveApiBaseUrl(): string {
   return fallback;
 }
 
+/** Safely unwraps API responses that may be enveloped as { status, data } */
+function unwrap<T>(resp: any): T {
+  return (resp && typeof resp === "object" && "data" in resp ? resp.data : resp) as T;
+}
+
 export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
   const [state, setState] = useState<AuthState>({});
   const masterKeyRef = useRef<CryptoKey | undefined>(undefined);
   const baseUrl = resolveApiBaseUrl();
 
   const client = useMemo(
-    () =>
-      new LockmateClient({
-        baseUrl,
-        encryption: {
-          encryptItem: async (draft) => {
-            const key = masterKeyRef.current;
-            if (!key) {
-              throw new Error(
-                "Missing encryption key. Please sign in again to unlock encryption."
-              );
+      () =>
+          new LockmateClient({
+            baseUrl,
+            encryption: {
+              encryptItem: async (draft: VaultItemDraft) => {
+                const key = masterKeyRef.current;
+                if (!key) {
+                  throw new Error(
+                      "Missing encryption key. Please sign in again to unlock encryption."
+                  );
+                }
+                return encryptVaultItemDraft(draft, key);
+              },
+              decryptItem: async (record: VaultItemRecord) => {
+                const key = masterKeyRef.current;
+                if (!key) {
+                  // Return the record unchanged if we can't decrypt in this session
+                  return record;
+                }
+                try {
+                  const secret = await decryptVaultItemRecord(record, key);
+                  return { ...record, secret };
+                } catch (error) {
+                  console.warn("Unable to decrypt vault item", error);
+                  return record;
+                }
+              }
             }
-            return encryptVaultItemDraft(draft, key);
-          },
-          decryptItem: async (record) => {
-            const key = masterKeyRef.current;
-            if (!key) {
-              return record;
-            }
-            try {
-              const secret = await decryptVaultItemRecord(record, key);
-              return { ...record, secret };
-            } catch (error) {
-              console.warn("Unable to decrypt vault item", error);
-              return record;
-            }
-          }
-        }
-      }),
-    [baseUrl]
+          }),
+      [baseUrl]
   );
 
   const login = useCallback(
-    async (username: string, password: string) => {
-      const response = await client.login({ username, password });
-      client.setToken(response.token);
+      async (username: string, password: string) => {
+        // Your backend returns: { status, data: { token, user, key_salt? ... } }
+        const raw = await client.login({ username, password });
+        const data = unwrap<{
+          token: string;
+          user: UserProfile;
+          key_salt?: string;
+          refreshToken?: string;
+          refresh_token?: string;
+          expiresAt?: string;
+        }>(raw);
 
-      let masterKey: CryptoKey | undefined;
-      let vaultKey: string | undefined;
-      if (response.key_salt) {
-        masterKey = await deriveMasterKeyFromPassword(password, response.key_salt);
-        vaultKey = await exportKeyToBase64(masterKey);
-      }
-      masterKeyRef.current = masterKey;
-
-      setState({
-        user: response.user,
-        keySalt: response.key_salt,
-        vaultKey,
-        tokens: {
-          token: response.token,
-          refreshToken: response.refreshToken,
-          expiresAt: response.expiresAt
+        const token = data.token;
+        if (!token) {
+          throw new Error("Login response missing token");
         }
-      });
-    },
-    [client]
+
+        client.setToken(token);
+
+        let masterKey: CryptoKey | undefined;
+        let vaultKey: string | undefined;
+        if (data.key_salt) {
+          masterKey = await deriveMasterKeyFromPassword(password, data.key_salt);
+          vaultKey = await exportKeyToBase64(masterKey);
+        }
+        masterKeyRef.current = masterKey;
+
+        const tokens: AppAuthTokens = {
+          token,
+          refreshToken: data.refreshToken ?? data.refresh_token ?? undefined,
+          expiresAt: data.expiresAt ?? undefined
+        };
+
+        setState({
+          user: data.user,
+          keySalt: data.key_salt,
+          vaultKey,
+          tokens
+        });
+      },
+      [client]
   );
 
   const register = useCallback(
-    async (input: RegisterRequest) => {
-      const profile = await client.register(input);
-      return profile;
-    },
-    [client]
+      async (input: RegisterRequest) => {
+        const profile = await client.register(input);
+        return unwrap<UserProfile>(profile);
+      },
+      [client]
   );
 
   const logout = useCallback(async () => {
@@ -127,16 +156,20 @@ export function AuthProvider({ children }: PropsWithChildren): JSX.Element {
     setState({});
   }, [client, state.tokens?.refreshToken]);
 
-  const value: AuthContextValue = {
-    client,
-    user: state.user,
-    tokens: state.tokens,
-    keySalt: state.keySalt,
-    isAuthenticated: Boolean(state.tokens?.token),
-    login,
-    register,
-    logout
-  };
+  const value: AuthContextValue = useMemo(
+      () => ({
+        client,
+        user: state.user,
+        tokens: state.tokens,
+        keySalt: state.keySalt,
+        vaultKey: state.vaultKey,
+        isAuthenticated: Boolean(state.tokens?.token),
+        login,
+        register,
+        logout
+      }),
+      [client, state.user, state.tokens, state.keySalt, state.vaultKey, login, register, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

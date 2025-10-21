@@ -3,6 +3,7 @@ use surrealdb::Error;
 
 const DEFINE_USERS: &str = r#"
 DEFINE TABLE users SCHEMAFULL;
+DEFINE FIELD user_id ON TABLE users TYPE int;         -- ← add this
 DEFINE FIELD username ON TABLE users TYPE string;
 DEFINE FIELD email ON TABLE users TYPE string;
 DEFINE FIELD password ON TABLE users TYPE string;
@@ -10,6 +11,10 @@ DEFINE FIELD encryption_public_key ON TABLE users TYPE string;
 DEFINE FIELD signature_public_key ON TABLE users TYPE string;
 DEFINE FIELD created_at ON TABLE users TYPE datetime;
 DEFINE FIELD updated_at ON TABLE users TYPE datetime;
+
+DEFINE INDEX users_user_id_unique ON TABLE users FIELDS user_id UNIQUE;
+DEFINE INDEX users_username_unique ON TABLE users FIELDS username UNIQUE;
+DEFINE INDEX users_email_unique ON TABLE users FIELDS email UNIQUE;
 "#;
 
 const DEFINE_VAULT_FOLDERS: &str = r#"

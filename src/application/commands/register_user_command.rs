@@ -79,7 +79,7 @@ pub async fn register_user_command(
 
     let now = Utc::now();
     let mut user = User {
-        id: repository.next_id().await.map_err(internal_error)?,
+        user_id: repository.next_id().await.map_err(internal_error)?,
         username: username.to_owned(),
         email: email.to_owned(),
         password,
@@ -94,21 +94,19 @@ pub async fn register_user_command(
     let mut created_user = repository
         .add_user(user)
         .await
-        .map_err(internal_error)?
-        .into_iter()
-        .next()
-        .ok_or_else(|| internal_error_message("Failed to create user"))?;
+        .map_err(internal_error)?;
 
+    // sanitize
     created_user.password.clear();
     created_user.encryption_public_key.clear();
     created_user.signature_public_key.clear();
 
     let json_response = serde_json::json!({
-        "id": created_user.id.to_string(),
-        "email": created_user.email,
-        "username": created_user.username,
-        "created_at": created_user.created_at,
-    });
+    "id": created_user.user_id.to_string(),
+    "email": created_user.email,
+    "username": created_user.username,
+    "created_at": created_user.created_at,
+});
 
     Ok((StatusCode::CREATED, Json(json_response)))
 }

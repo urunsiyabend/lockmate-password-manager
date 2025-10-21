@@ -101,7 +101,7 @@ pub async fn verify_mfa_login(
         .map_err(|_| json_error(StatusCode::NOT_FOUND, "User not found"))?;
     user.password.clear();
 
-    let token = create_session_token(user.id, &user.username).map_err(|err| match err {
+    let token = create_session_token(user.user_id, &user.username).map_err(|err| match err {
         AuthServiceError::MissingSecret => json_error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "JWT secret is not configured",

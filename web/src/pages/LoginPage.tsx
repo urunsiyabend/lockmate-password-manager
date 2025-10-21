@@ -18,7 +18,7 @@ function extractErrorMessage(error: unknown): string {
 }
 
 export default function LoginPage(): JSX.Element {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("");
@@ -38,16 +38,20 @@ export default function LoginPage(): JSX.Element {
     }
   }, [location, navigate]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/vaults", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage(null);
-
     try {
       await login(username.trim(), password);
-      navigate("/vaults");
-    } catch (error) {
-      setErrorMessage(extractErrorMessage(error));
+    } catch (err) {
+      setErrorMessage(extractErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

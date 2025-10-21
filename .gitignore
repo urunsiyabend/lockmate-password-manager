@@ -118,3 +118,5 @@ web/dist/
 !web/public/**
 !web/src/
 !web/src/**
+
+.env

@@ -37,7 +37,7 @@ const client = new LockmateClient({
 const { token } = await client.login({ username: "jane", password: "P@ssw0rd!" });
 client.setToken(token);
 
-const vaults = await client.listVaults();
+const vaults = await client.listVaultItems();
 ```
 
 ## Development

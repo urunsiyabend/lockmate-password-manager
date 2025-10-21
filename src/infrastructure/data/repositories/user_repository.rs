@@ -30,10 +30,10 @@ impl UserRepository {
         Err(error)
     }
 
-    pub async fn add_user(&self, user: User) -> Result<Vec<User>, Error> {
+    pub async fn add_user(&self, user: User) -> Result<User, Error> {
         #[derive(Serialize)]
         struct DbUser {
-            id: i32,
+            user_id: i32,                                // ← note the name
             username: String,
             email: String,
             password: String,
@@ -44,27 +44,25 @@ impl UserRepository {
         }
 
         impl From<&User> for DbUser {
-            fn from(user: &User) -> Self {
+            fn from(u: &User) -> Self {
                 Self {
-                    id: user.id,
-                    username: user.username.clone(),
-                    email: user.email.clone(),
-                    password: user.password.clone(),
-                    encryption_public_key: user.encryption_public_key.clone(),
-                    signature_public_key: user.signature_public_key.clone(),
-                    created_at: user.created_at.into(),
-                    updated_at: user.updated_at.into(),
+                    user_id: u.user_id,
+                    username: u.username.clone(),
+                    email: u.email.clone(),
+                    password: u.password.clone(),
+                    encryption_public_key: u.encryption_public_key.clone(),
+                    signature_public_key: u.signature_public_key.clone(),
+                    created_at: u.created_at.into(),
+                    updated_at: u.updated_at.into(),
                 }
             }
         }
 
         let payload = DbUser::from(&user);
-        let opt_records = DB.create(&self.table).content(payload).await?;
-        match opt_records {
-            Some(records) => Ok(records),
-            None => Err(Error::Db(Thrown("Failed to insert user".into()))),
-        }
+        let record: Option<User> = DB.create(&self.table).content(payload).await?;
+        record.ok_or_else(|| Error::Db(Thrown("Failed to insert user".into())))
     }
+
 
     pub async fn get_by_username(&self, username: &str) -> Result<User, Error> {
         let mut response = DB
@@ -90,22 +88,16 @@ impl UserRepository {
     }
 
     pub async fn next_id(&self) -> Result<i32, Error> {
-        let mut response = DB
-            .query("SELECT math::max(id) AS max_id FROM type::table($table)")
+        let mut res = DB
+            .query("SELECT math::max(array::group(user_id)) AS max_id FROM type::table($table)")
             .bind(("table", self.table.clone()))
             .await?;
 
         #[derive(Deserialize)]
-        struct MaxIdResult {
-            max_id: Option<i32>,
-        }
+        struct Row { max_id: Option<i64> }
 
-        let max_id = response
-            .take::<Option<MaxIdResult>>(0)?
-            .and_then(|record| record.max_id)
-            .unwrap_or(0);
-
-        Ok(max_id + 1)
+        let max_id = res.take::<Option<Row>>(0)?.and_then(|r| r.max_id).unwrap_or(0);
+        Ok((max_id as i32) + 1)
     }
 
     async fn exists_by_field(&self, field: &str, value: &str) -> Result<bool, Error> {

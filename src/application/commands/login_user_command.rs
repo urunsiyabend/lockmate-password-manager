@@ -52,7 +52,7 @@ pub async fn login_user_command(
         Ok(valid) => valid,
         Err(_) => {
             log_login_attempt(
-                Some(user.id),
+                Some(user.user_id),
                 "error",
                 ip_address.clone(),
                 Some(serde_json::json!({ "reason": "password_verification_failed" })),
@@ -70,7 +70,7 @@ pub async fn login_user_command(
 
     if !password_is_valid {
         log_login_attempt(
-            Some(user.id),
+            Some(user.user_id),
             "failure",
             ip_address.clone(),
             Some(serde_json::json!({ "reason": "invalid_password" })),
@@ -89,7 +89,7 @@ pub async fn login_user_command(
 
     let mfa_repository = MfaRepository::new();
     if let Some(device) = mfa_repository
-        .get_active_by_user(user.id)
+        .get_active_by_user(user.user_id)
         .await
         .map_err(|err| {
             let json_response = serde_json::json!({
@@ -100,9 +100,9 @@ pub async fn login_user_command(
         })?
     {
         if device.enabled {
-            let challenge = create_challenge(sanitized_user.id).await;
+            let challenge = create_challenge(sanitized_user.user_id).await;
             log_login_attempt(
-                Some(sanitized_user.id),
+                Some(sanitized_user.user_id),
                 "mfa_required",
                 ip_address.clone(),
                 Some(serde_json::json!({ "challenge_id": challenge.id })),
@@ -121,7 +121,7 @@ pub async fn login_user_command(
         }
     }
 
-    let token = create_session_token(sanitized_user.id, &sanitized_user.username).map_err(
+    let token = create_session_token(sanitized_user.user_id, &sanitized_user.username).map_err(
         |err: AuthServiceError| {
             error!("Failed to create session token: {err}");
 
@@ -141,7 +141,7 @@ pub async fn login_user_command(
         },
     )?;
 
-    log_login_attempt(Some(sanitized_user.id), "success", ip_address, None).await;
+    log_login_attempt(Some(sanitized_user.user_id), "success", ip_address, None).await;
 
     let json_response = serde_json::json!({
         "status": "success",
